@@ -1,0 +1,20 @@
+<html>
+<head>
+  <title>SignJack</title>
+</head>
+
+<body>
+  <p>Jack you some signs!</p>
+  <form action="/scan" method="post">
+    <button type="submit" value="scan">Scan Devices</button>
+  </form>
+  <ol>
+    {% for d in devices %}
+      <li><a href="http://{{ d[0] }}" target="_blank">{{d[1]}}</a></li>
+    {% endfor %}
+  </ol>
+  <form action="/clear" method="post">
+    <button type="submit" value="clear">Clear Device List</button>
+  </form>
+</body>
+</html>
