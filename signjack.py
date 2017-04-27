@@ -68,7 +68,7 @@ def scan_devices():
   nm = nmap.PortScanner()
   print host
   print "Scanning for network devices"
-  nm.scan(host+'/28', arguments='-O')
+  nm.scan(host+'/24', arguments='-O')
   for h in nm.all_hosts():
       if 'mac' in nm[h]['addresses']:
           devices.append((nm[h]['addresses']['ipv4'], nm[h]['vendor'].values()[0]))
