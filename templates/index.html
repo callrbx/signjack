@@ -4,17 +4,46 @@
 </head>
 
 <body>
-  <p>Jack you some signs!</p>
-  <form action="/scan" method="post">
-    <button type="submit" value="scan">Scan Devices</button>
+  <p><h1>Jack you some signs!</h1></p>
+
+  <form action="/add" method="post">
+    IP Addr: <input type="text" name="ip" placeholder="192.168.1.1"></input>
+    Location: <input type="text" name="location" placeholder="Grant Hall"></input>
+    <button type="submit" value="add">Add</button>
   </form>
-  <ol>
-    {% for d in devices %}
-      <li><a href="http://{{ d[0] }}" target="_blank">{{d[1]}}</a></li>
-    {% endfor %}
-  </ol>
+
+  <form action="/scan" method="post">
+    <button type="submit" value="scan" onclick="scanning();">Scan Devices</button>
+  </form>
+
+  <div id="loading" style="visibility:hidden;height:0px;width:0px;">
+    <p>Scanning for Devices</p>
+    <img src="static\loading.gif" alt="loading gif">
+  </div>
+
+  <div id="devices">
+    <ol>
+      {% for d in devices %}
+        <li><a href="http://{{ d[0] }}" target="_blank">{{d[1]}}</a></li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  </br>
+
   <form action="/clear" method="post">
     <button type="submit" value="clear">Clear Device List</button>
   </form>
+
+
+  <script type="text/javascript">
+    function scanning(){
+      document.getElementById("devices").style.visibility = "hidden";
+      document.getElementById("loading").style.visibility = "visible";
+      document.getElementById("loading").style.height = "20px";
+      document.getElementById("loading").style.width = "20px";
+    }
+  </script>
+
 </body>
 </html>
