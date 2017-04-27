@@ -1,4 +1,5 @@
 <html>
+
 <head>
   <title>SignJack</title>
 </head>
@@ -27,9 +28,8 @@
         <li><a href="http://{{ d[0] }}" target="_blank">{{d[1]}}</a></li>
       {% endfor %}
     </ol>
-  </div>
-
   </br>
+  </div>
 
   <form action="/clear" method="post">
     <button type="submit" value="clear">Clear Device List</button>
@@ -40,8 +40,8 @@
     function scanning(){
       document.getElementById("devices").style.visibility = "hidden";
       document.getElementById("loading").style.visibility = "visible";
-      document.getElementById("loading").style.height = "20px";
-      document.getElementById("loading").style.width = "20px";
+      document.getElementById("loading").style.height = "50px";
+      document.getElementById("loading").style.width = "200px";
     }
   </script>
 

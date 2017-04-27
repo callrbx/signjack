@@ -44,14 +44,14 @@ def index():
 @app.route("/add", methods=['POST'])
 def manual_add():
   global devices
-  devices.append((request.args.get("ip"), request.args.get("location")))
-  return redirect(url_for("index")
+  devices.append((request.form["ip"], request.form["location"]))
+  return redirect(url_for("index"))
 
 #Leverages nmap to scan the LAN for BrightSign MACs
 @app.route("/scan", methods=['POST'])
 def dev_scan_button():
   global devices
-  devices = scan_devices()
+  devices += scan_devices()
   return redirect(url_for("index"))
 
 #Remove all devices from the global device list
@@ -68,7 +68,7 @@ def scan_devices():
   nm = nmap.PortScanner()
   print host
   print "Scanning for network devices"
-  nm.scan(host+'/24', arguments='-O')
+  nm.scan(host+'/28', arguments='-O')
   for h in nm.all_hosts():
       if 'mac' in nm[h]['addresses']:
           devices.append((nm[h]['addresses']['ipv4'], nm[h]['vendor'].values()[0]))
