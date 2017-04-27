@@ -24,6 +24,8 @@ app = Flask(__name__)
 bsmac = "c0:56:27"  #using Belkin, as i do not have access to sign
 
 #Global devices array; holds added device info
+#Device entries stored in tuple: (IP, Location)
+#Location is scraped from index of device
 devices = []
 
 #Determine our host ip; if not provided, use socket methods
@@ -42,9 +44,7 @@ def index():
 @app.route("/add", methods=['POST'])
 def manual_add():
   global devices
-  ip = request.args.get("ip")
-  loc = request.args.get("location")
-  devices.append((ip, loc))
+  devices.append((request.args.get("ip"), request.args.get("location")))
   return redirect(url_for("index")
 
 #Leverages nmap to scan the LAN for BrightSign MACs
