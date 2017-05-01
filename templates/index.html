@@ -7,12 +7,13 @@
 <body>
   <p><h1>Jack you some signs!</h1></p>
 
+  <p><h4>Know a sign? Add it now!</h4></p>
   <form action="/add" method="post">
     IP Addr: <input type="text" name="ip" placeholder="192.168.1.1"></input>
-    Location: <input type="text" name="location" placeholder="Grant Hall"></input>
     <button type="submit" value="add">Add</button>
   </form>
 
+  <p><h4>Don't know any? We'll find it for you!</h4></p>
   <form action="/scan" method="post">
     <button type="submit" value="scan" onclick="scanning();">Scan Devices</button>
   </form>

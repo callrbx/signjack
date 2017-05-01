@@ -1,27 +1,19 @@
 #!/usr/bin/python2
 
 #Setup correct imports
-import time, sys, re, socket, argparse
+import time, sys, re, socket, nmap, urllib2
+from flask import Flask, render_template, redirect, url_for, request
+from bs4 import BeautifulSoup
 
-try:
-  import nmap
-except:
-  print "install nmap library"
-  exit(-1)
-
-try:
-  from flask import Flask, render_template, redirect, url_for, request
-except:
-  print "install flask"
-  exit(-1)
 
 #add some sort of sudo check
 
 #The flask object our app runs on top of
 app = Flask(__name__)
+nm = ""
 
 #Define the vendor id for BrightSign MAC
-bsmac = "c0:56:27"  #using Belkin, as i do not have access to sign
+bsmac = "90:ac:3f"  #using Belkin, as i do not have access to sign
 
 #Global devices array; holds added device info
 #Device entries stored in tuple: (IP, Location)
@@ -44,7 +36,7 @@ def index():
 @app.route("/add", methods=['POST'])
 def manual_add():
   global devices
-  devices.append((request.form["ip"], request.form["location"]))
+  devices.append((request.form["ip"], get_dev_loc(request.form["ip"])))
   return redirect(url_for("index"))
 
 #Leverages nmap to scan the LAN for BrightSign MACs
@@ -63,19 +55,29 @@ def dev_clear_button():
 
 #Nmap LAN for BrightSign MACs
 def scan_devices():
-  global host
+  global host, bsmac, nm
   devices = []
-  nm = nmap.PortScanner()
-  print host
-  print "Scanning for network devices"
   nm.scan(host+'/24', arguments='-O')
   for h in nm.all_hosts():
-      if 'mac' in nm[h]['addresses']:
-          devices.append((nm[h]['addresses']['ipv4'], nm[h]['vendor'].values()[0]))
+    if 'mac' in nm[h]['addresses']:
+      if bsmac in nm[h]['vendor'].keys()[0].lower():
+        ip = nm[h]['addresses']['ipv4']
+        devices.append((ip, get_dev_loc(ip)))
 
   return devices
 
+#Scrape BrightSign webpage to determine device location
+def get_dev_loc(ip):
+  page = urllib2.urlopen("http://"+ip)
+  content = BeautifulSoup(page, "html.parser")
+  loc = content.find_all("td")[3].get_text()
+  return loc
+  
+  
+
 def main():
+  global nm
+  nm = nmap.PortScanner()
   app.run(debug=True)
 
 if __name__ == "__main__":
