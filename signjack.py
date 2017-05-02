@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 
 #Setup correct imports
-import time, sys, re, socket, nmap, urllib2
+import time, sys, re, socket, nmap, urllib2, requests
 from flask import Flask, render_template, redirect, url_for, request
 from bs4 import BeautifulSoup
 
@@ -20,6 +20,11 @@ bsmac = "90:ac:3f"  #using Belkin, as i do not have access to sign
 devices = [("192.168.113.109", "USMA Book Store")]
 #devices = []
 
+
+#File paths on the device
+files = []
+cur = 0
+
 #Determine our host ip; if not provided, use socket methods
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.connect(("8.8.8.8", 80))
@@ -29,17 +34,29 @@ s.close()
 #Map our index page
 @app.route("/")
 def index():
-  global devices
-  return render_template("index.html", devices=devices)
-
+  global devices, files, index
+  return render_template("index.html", devices=devices, files=files, cur=cur)
 
 #Add a device by hand; no scanning required
 @app.route("/add", methods=['POST'])
 def manual_add():
-  global devices
+  global devices, files
   loc =  get_dev_loc(request.form["ip"])
   if loc is not None:
     devices.append((request.form["ip"], loc))
+  return redirect(url_for("index"))
+
+#Navigate images
+@app.route("/skip", methods=['POST'])
+def skip_file():
+  global cur, files
+  sel = request.form["move"]
+  if "next" in sel:
+    cur = cur+1 if cur+1 < len(files) else 0
+  elif "replace" in sel:
+    replace(files[cur])  
+  else:
+    cur = cur-1 if cur-1 > 0 else 0
   return redirect(url_for("index"))
 
 
@@ -54,7 +71,8 @@ def dev_scan_button():
 #Remove all devices from the global device list
 @app.route("/clear", methods=['POST'])
 def dev_clear_button():
-  global devices
+  global devices, files
+  files = []
   devices = []
   return redirect(url_for("index"))
 
@@ -65,57 +83,56 @@ def control_panel():
   target = request.form["target"]
   command = request.form["command"]
 
-  if command is "Reboot":
+  if "Reboot" in command:
     url = "http://{}/action.html?reboot=Reboot".format(target)
     urllib2.urlopen(url)
   else:
     url = "http://{}/storage.html?rp=sd/pool".format(target)
     spider(target, url)
-     
-  return redirect(url_for("index"))
 
+  return redirect(url_for("index"))
   
 #Nmap LAN for BrightSign MACs
 def scan_devices():
   global host, bsmac, nm
   devices = []
-  nm.scan(host+'/24', arguments='-O')
+  nm.scan(host+'/24', arguments='-sP')
+
   for h in nm.all_hosts():
     if 'mac' in nm[h]['addresses']:
       if bsmac in nm[h]['vendor'].keys()[0].lower():
         ip = nm[h]['addresses']['ipv4']
         devices.append((ip, get_dev_loc(ip)))
+
   return devices
 
 #Scrape BrightSign webpage to determine device location
 def get_dev_loc(ip):
-  try:
-    page = urllib2.urlopen("http://"+ip, timeout=2)
-    content = BeautifulSoup(page, "html.parser")
-    loc = content.find_all("td")[3].get_text()
-    return loc
-  except:
-    pass
+  page = urllib2.urlopen("http://"+ip, timeout=2)
+  content = BeautifulSoup(page, "html.parser")
+  loc = content.find_all("td")[3].get_text()
+  return loc
 
 def scrape_links(url):
-    page = urllib2.urlopen(url)
-    page = BeautifulSoup(page, "html.parser")
-    links = page.find_all("a", href=True) 
-    content = [l["href"] for l in links if "pool" in l["href"] and "kill" not in l["href"]]
-    return content
+  page = urllib2.urlopen(url)
+  page = BeautifulSoup(page, "html.parser")
+  links = page.find_all("a", href=True) 
+  content = [l["href"] for l in links if "pool" in l["href"] and "kill" not in l["href"]]
+  return content
 
 def scrap_files(url):
-    page = urllib2.urlopen(url)
-    page = BeautifulSoup(page, "html.parser")
-    links = page.find_all("a", href=True) 
-    content = [l["href"] for l in links if "sha" in l["href"] and "kill" not in l["href"]]
-    files = [f for f in content if "save" in f]
-    return files
+  page = urllib2.urlopen(url)
+  page = BeautifulSoup(page, "html.parser")
+  links = page.find_all("a", href=True) 
+  content = [l["href"] for l in links if "sha" in l["href"] and "kill" not in l["href"]]
+  files = [f for f in content if "save" in f]
+  return files
 
 #Spider function to find all possible pictures on the BrightSign
 def spider(target, url):
+  global files
+  files = []  
   folders = []
-  files = []
   links = scrape_links(url)
   for l in links:
     for k in scrape_links("{}/{}".format(url, l[-1])):
@@ -124,7 +141,25 @@ def spider(target, url):
     files += scrap_files(f)
   for i in range(len(files)):
     files[i] = "http://{}{}".format(target, files[i])
-  return files
+
+
+#The function that creates a backup and uploads a new one
+def replace(furl):
+  tfurl = furl.replace("save", "tools")
+  parts = furl.split("/")
+  #make backup
+  backurl = "http://{0}/rename?origfile=sd%2Fpool%2F{2}%2F{3}%2F{1}&custom=&filename={1}.backup&rename=Rename".format(parts[2], parts[-1], parts[-3], parts[-2])
+  urllib2.urlopen(backurl)
+
+  upurl = "http://{0}/upload.html?rp=sd/pool/{1}/{2}".format(parts[2], parts[-3], parts[-2])
+
+  f = open("test.png", "rb").read()
+  o = open(parts[-1], "wb")
+  o.write(f)
+  o.close()
+
+  with open(parts[-1], 'rb') as f: r = requests.post(upurl, files={'report.xls': f})
+  
     
 
 if __name__ == "__main__":

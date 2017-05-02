@@ -39,6 +39,17 @@
       <button type="submit" value="clear">Clear Device List</button>
     </form>
     {% endif %}
+
+    {% if files|length > 0 %}
+      <img src="{{files[cur]}}" alt="not a real picture. skip" style="width:550px;height:350px;">
+      <p><a href="{{files[cur]}}">{{files[cur]}}</a></p>
+      <form action="/skip" method="post">
+        <button type="submit" name="move" value="prev";">Prev Picture</button>
+        <button type="submit" name="move" value="replace";">Replace Picture</button>
+        <button type="submit" name="move" value="next";">Next Picture</button>
+      </form>
+    {% endif %}
+
   </div>
 
   <script type="text/javascript">
