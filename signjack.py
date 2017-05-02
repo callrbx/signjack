@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 
 #Setup correct imports
-import time, sys, re, socket, nmap, urllib2, requests
+import time, sys, re, socket, nmap, urllib2, requests, os
 from flask import Flask, render_template, redirect, url_for, request
 from bs4 import BeautifulSoup
 
@@ -17,8 +17,7 @@ bsmac = "90:ac:3f"  #using Belkin, as i do not have access to sign
 #Global devices array; holds added device info
 #Device entries stored in tuple: (IP, Location)
 #Location is scraped from index of device
-devices = [("192.168.113.109", "USMA Book Store")]
-#devices = []
+devices = []
 
 
 #File paths on the device
@@ -54,7 +53,7 @@ def skip_file():
   if "next" in sel:
     cur = cur+1 if cur+1 < len(files) else 0
   elif "replace" in sel:
-    replace(files[cur])  
+    replace(files[cur])
   else:
     cur = cur-1 if cur-1 > 0 else 0
   return redirect(url_for("index"))
@@ -91,7 +90,7 @@ def control_panel():
     spider(target, url)
 
   return redirect(url_for("index"))
-  
+
 #Nmap LAN for BrightSign MACs
 def scan_devices():
   global host, bsmac, nm
@@ -116,14 +115,14 @@ def get_dev_loc(ip):
 def scrape_links(url):
   page = urllib2.urlopen(url)
   page = BeautifulSoup(page, "html.parser")
-  links = page.find_all("a", href=True) 
+  links = page.find_all("a", href=True)
   content = [l["href"] for l in links if "pool" in l["href"] and "kill" not in l["href"]]
   return content
 
 def scrap_files(url):
   page = urllib2.urlopen(url)
   page = BeautifulSoup(page, "html.parser")
-  links = page.find_all("a", href=True) 
+  links = page.find_all("a", href=True)
   content = [l["href"] for l in links if "sha" in l["href"] and "kill" not in l["href"]]
   files = [f for f in content if "save" in f]
   return files
@@ -131,7 +130,7 @@ def scrap_files(url):
 #Spider function to find all possible pictures on the BrightSign
 def spider(target, url):
   global files
-  files = []  
+  files = []
   folders = []
   links = scrape_links(url)
   for l in links:
@@ -147,25 +146,16 @@ def spider(target, url):
 def replace(furl):
   tfurl = furl.replace("save", "tools")
   parts = furl.split("/")
-  #make backup
   backurl = "http://{0}/rename?origfile=sd%2Fpool%2F{2}%2F{3}%2F{1}&custom=&filename={1}.backup&rename=Rename".format(parts[2], parts[-1], parts[-3], parts[-2])
   urllib2.urlopen(backurl)
-
-  upurl = "http://{0}/upload.html?rp=sd/pool/{1}/{2}".format(parts[2], parts[-3], parts[-2])
-
-  f = open("test.png", "rb").read()
+  f = open(sys.argv[1], "rb").read()
   o = open(parts[-1], "wb")
   o.write(f)
   o.close()
-
+  upurl = "http://{0}/upload.html?rp=sd/pool/{1}/{2}".format(parts[2], parts[-3], parts[-2])
   with open(parts[-1], 'rb') as f: r = requests.post(upurl, files={'report.xls': f})
-  
-    
+  os.remove(parts[-1])
+
 
 if __name__ == "__main__":
   app.run(debug=True)
-
-
-
-
-
