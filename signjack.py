@@ -36,7 +36,9 @@ def index():
 @app.route("/add", methods=['POST'])
 def manual_add():
   global devices
-  devices.append((request.form["ip"], get_dev_loc(request.form["ip"])))
+  loc =  get_dev_loc(request.form["ip"])
+  if loc is not None:
+    devices.append((request.form["ip"], loc))
   return redirect(url_for("index"))
 
 #Leverages nmap to scan the LAN for BrightSign MACs
@@ -53,6 +55,22 @@ def dev_clear_button():
   devices = []
   return redirect(url_for("index"))
 
+#Control backend for BrightSign utilities; reboot, etc.
+@app.route("/control", methods=["POST"])
+def control_panel():
+  try:
+    target = request.form["target"]
+    command = request.form["command"]
+    print target, command
+
+    if command is "Reboot":
+      url = "http://{}/action.html?reboot=Reboot".format(target)
+      urllib2.urlopen(url)
+  except:
+    pass
+
+  return redirect(url_for("index"))
+  
 #Nmap LAN for BrightSign MACs
 def scan_devices():
   global host, bsmac, nm
@@ -63,22 +81,23 @@ def scan_devices():
       if bsmac in nm[h]['vendor'].keys()[0].lower():
         ip = nm[h]['addresses']['ipv4']
         devices.append((ip, get_dev_loc(ip)))
-
   return devices
 
 #Scrape BrightSign webpage to determine device location
+#location is always in the same spot; scraping can be done easily
 def get_dev_loc(ip):
-  page = urllib2.urlopen("http://"+ip)
-  content = BeautifulSoup(page, "html.parser")
-  loc = content.find_all("td")[3].get_text()
-  return loc
+  try:
+    page = urllib2.urlopen("http://"+ip, timeout=2)
+    content = BeautifulSoup(page, "html.parser")
+    loc = content.find_all("td")[3].get_text()
+    return loc
+  except:
+    pass
   
-  
-
 def main():
   global nm
   nm = nmap.PortScanner()
-  app.run(debug=True)
+  app.run()
 
 if __name__ == "__main__":
   main()

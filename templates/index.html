@@ -24,18 +24,21 @@
   </div>
 
   <div id="devices">
-    <ol>
+    {% if devices|length > 0 %}
+    </br>
+    <form action="/control" method="post">
       {% for d in devices %}
-        <li><a href="http://{{ d[0] }}" target="_blank">{{d[1]}}</a></li>
+      <input type="radio" name="target" value="{{d[0]}}"><a href="http://{{d[0]}}" target="_blank">{{d[1]}}</a></br>
       {% endfor %}
-    </ol>
-  </br>
+      </br>
+      <input type="submit" name="command" value="Reboot">
+    </form>
+    </br>
+    <form action="/clear" method="post">
+      <button type="submit" value="clear">Clear Device List</button>
+    </form>
+    {% endif %}
   </div>
-
-  <form action="/clear" method="post">
-    <button type="submit" value="clear">Clear Device List</button>
-  </form>
-
 
   <script type="text/javascript">
     function scanning(){
