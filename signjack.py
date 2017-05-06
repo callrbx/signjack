@@ -155,7 +155,7 @@ def replace(furl, refile):
   os.rename(refile, parts[-1])
   upurl = "http://{0}/upload.html?rp=sd/pool/{1}/{2}".format(parts[2], parts[-3], parts[-2])
   with open(parts[-1], 'rb') as f: r = requests.post(upurl, files={'report.xls': f})
-  #os.remove(parts[-1])
+  os.remove(parts[-1])
 
 
 if __name__ == "__main__":
