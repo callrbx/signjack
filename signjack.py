@@ -25,10 +25,7 @@ files = []
 cur = 0
 
 #Determine our host ip; if not provided, use socket methods
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(("8.8.8.8", 80))
-host = ".".join(s.getsockname()[0].split(".")[:-1])+".0"
-s.close()
+
 
 #Map our index page
 @app.route("/")
@@ -53,7 +50,9 @@ def skip_file():
   if "next" in sel:
     cur = cur+1 if cur+1 < len(files) else 0
   elif "replace" in sel:
-    replace(files[cur])
+    refile = request.files['file']
+    refile.save(refile.filename)
+    replace(files[cur], refile.filename)
   else:
     cur = cur-1 if cur-1 > 0 else 0
   return redirect(url_for("index"))
@@ -70,7 +69,8 @@ def dev_scan_button():
 #Remove all devices from the global device list
 @app.route("/clear", methods=['POST'])
 def dev_clear_button():
-  global devices, files
+  global devices, files, cur
+  cur = 0
   files = []
   devices = []
   return redirect(url_for("index"))
@@ -93,7 +93,11 @@ def control_panel():
 
 #Nmap LAN for BrightSign MACs
 def scan_devices():
-  global host, bsmac, nm
+  global bsmac, nm
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  s.connect(("8.8.8.8", 80))
+  host = ".".join(s.getsockname()[0].split(".")[:-1])+".0"
+  s.close()
   devices = []
   nm.scan(host+'/24', arguments='-sP')
 
@@ -143,19 +147,20 @@ def spider(target, url):
 
 
 #The function that creates a backup and uploads a new one
-def replace(furl):
+def replace(furl, refile):
   tfurl = furl.replace("save", "tools")
   parts = furl.split("/")
   backurl = "http://{0}/rename?origfile=sd%2Fpool%2F{2}%2F{3}%2F{1}&custom=&filename={1}.backup&rename=Rename".format(parts[2], parts[-1], parts[-3], parts[-2])
   urllib2.urlopen(backurl)
-  f = open(sys.argv[1], "rb").read()
-  o = open(parts[-1], "wb")
-  o.write(f)
-  o.close()
+  os.rename(refile, parts[-1])
   upurl = "http://{0}/upload.html?rp=sd/pool/{1}/{2}".format(parts[2], parts[-3], parts[-2])
   with open(parts[-1], 'rb') as f: r = requests.post(upurl, files={'report.xls': f})
-  os.remove(parts[-1])
+  #os.remove(parts[-1])
 
 
 if __name__ == "__main__":
+  app.config["UPLOAD_FOLDER"] = "."
+  #app.run(debug=True, host="0.0.0.0", port=80)
   app.run(debug=True)
+
+
