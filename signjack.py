@@ -24,8 +24,6 @@ devices = []
 files = []
 cur = 0
 
-#Determine our host ip; if not provided, use socket methods
-
 
 #Map our index page
 @app.route("/")
@@ -61,8 +59,19 @@ def skip_file():
 #Leverages nmap to scan the LAN for BrightSign MACs
 @app.route("/scan", methods=['POST'])
 def dev_scan_button():
-  global devices
-  devices += scan_devices()
+  global bsmac, nm, devices
+  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  s.connect(("8.8.8.8", 80))
+  host = ".".join(s.getsockname()[0].split(".")[:-1])+".0"
+  s.close()
+  devices = []
+  nm.scan(host+'/24', arguments='-sP')
+
+  for h in nm.all_hosts():
+    if 'mac' in nm[h]['addresses']:
+      if bsmac in nm[h]['vendor'].keys()[0].lower():
+        ip = nm[h]['addresses']['ipv4']
+        devices.append((ip, get_dev_loc(ip)))
   return redirect(url_for("index"))
 
 
@@ -91,23 +100,6 @@ def control_panel():
 
   return redirect(url_for("index"))
 
-#Nmap LAN for BrightSign MACs
-def scan_devices():
-  global bsmac, nm
-  s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  s.connect(("8.8.8.8", 80))
-  host = ".".join(s.getsockname()[0].split(".")[:-1])+".0"
-  s.close()
-  devices = []
-  nm.scan(host+'/24', arguments='-sP')
-
-  for h in nm.all_hosts():
-    if 'mac' in nm[h]['addresses']:
-      if bsmac in nm[h]['vendor'].keys()[0].lower():
-        ip = nm[h]['addresses']['ipv4']
-        devices.append((ip, get_dev_loc(ip)))
-
-  return devices
 
 #Scrape BrightSign webpage to determine device location
 def get_dev_loc(ip):
