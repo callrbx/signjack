@@ -1,15 +1,15 @@
 #!/usr/bin/python2
 
 #Setup correct imports
-import time, sys, re, socket, nmap, urllib2, requests, os
+import time, sys, re, socket, urllib2, requests, os
 from flask import Flask, render_template, redirect, url_for, request
 from bs4 import BeautifulSoup
+from subprocess import Popen, PIPE
 
 #add some sort of sudo check
 
 #The flask object our app runs on top of
 app = Flask(__name__)
-nm = nmap.PortScanner()
 
 #Define the vendor id for BrightSign MAC
 bsmac = "90:ac:3f"  #using Belkin, as i do not have access to sign
@@ -62,16 +62,22 @@ def dev_scan_button():
   global bsmac, nm, devices
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   s.connect(("8.8.8.8", 80))
-  host = ".".join(s.getsockname()[0].split(".")[:-1])+".0"
+  host = ".".join(s.getsockname()[0].split(".")[:-1])
   s.close()
   devices = []
-  nm.scan(host+'/24', arguments='-sP')
+  FNULL = open(os.devnull)
+  for n in range(0, 255):
+    tgt = "{}.{}".format(host,n)
+    Popen(["ping", "-c", "1", tgt], stdout=FNULL, stderr=FNULL)
+    s = Popen(["arp", "-n", tgt], stdout=PIPE).communicate()[0]
+    try:
+      mac = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", s).groups()[0]
+      if bsmac in mac:
+        print ip, mac
+        devices.append((tgt, get_dev_loc(tgt)))
+    except:
+      pass
 
-  for h in nm.all_hosts():
-    if 'mac' in nm[h]['addresses']:
-      if bsmac in nm[h]['vendor'].keys()[0].lower():
-        ip = nm[h]['addresses']['ipv4']
-        devices.append((ip, get_dev_loc(ip)))
   return redirect(url_for("index"))
 
 
