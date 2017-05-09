@@ -6,13 +6,11 @@ from flask import Flask, render_template, redirect, url_for, request
 from bs4 import BeautifulSoup
 from subprocess import Popen, PIPE
 
-#add some sort of sudo check
-
 #The flask object our app runs on top of
 app = Flask(__name__)
 
 #Define the vendor id for BrightSign MAC
-bsmac = "90:ac:3f"  #using Belkin, as i do not have access to sign
+bsmac = "90:ac:3f"
 
 #Global devices array; holds added device info
 #Device entries stored in tuple: (IP, Location)
@@ -31,6 +29,7 @@ def index():
   global devices, files, index
   return render_template("index.html", devices=devices, files=files, cur=cur)
 
+
 #Add a device by hand; no scanning required
 @app.route("/add", methods=['POST'])
 def manual_add():
@@ -39,6 +38,7 @@ def manual_add():
   if loc is not None:
     devices.append((request.form["ip"], loc))
   return redirect(url_for("index"))
+
 
 #Navigate images
 @app.route("/skip", methods=['POST'])
@@ -59,7 +59,7 @@ def skip_file():
 #Leverages nmap to scan the LAN for BrightSign MACs
 @app.route("/scan", methods=['POST'])
 def dev_scan_button():
-  global bsmac, nm, devices
+  global bsmac, devices
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   s.connect(("8.8.8.8", 80))
   host = ".".join(s.getsockname()[0].split(".")[:-1])
@@ -73,11 +73,9 @@ def dev_scan_button():
     try:
       mac = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", s).groups()[0]
       if bsmac in mac:
-        print ip, mac
         devices.append((tgt, get_dev_loc(tgt)))
     except:
       pass
-
   return redirect(url_for("index"))
 
 
@@ -114,12 +112,14 @@ def get_dev_loc(ip):
   loc = content.find_all("td")[3].get_text()
   return loc
 
+
 def scrape_links(url):
   page = urllib2.urlopen(url)
   page = BeautifulSoup(page, "html.parser")
   links = page.find_all("a", href=True)
   content = [l["href"] for l in links if "pool" in l["href"] and "kill" not in l["href"]]
   return content
+
 
 def scrap_files(url):
   page = urllib2.urlopen(url)
@@ -128,6 +128,7 @@ def scrap_files(url):
   content = [l["href"] for l in links if "sha" in l["href"] and "kill" not in l["href"]]
   files = [f for f in content if "save" in f]
   return files
+
 
 #Spider function to find all possible pictures on the BrightSign
 def spider(target, url):
